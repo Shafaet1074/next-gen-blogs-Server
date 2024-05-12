@@ -27,6 +27,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     const blogsCollection =client.db('blogsDB').collection('blogs')
     const WishBlogsCollection =client.db('WishblogsDB').collection('wishblogs/:email')
+    const CommentCollection =client.db('CommentsDB').collection('addcomment/:id')
   
     await client.connect();
 
@@ -86,6 +87,13 @@ async function run() {
       delete newPaintings._id; // Remove the _id field
       console.log(newPaintings);
       const result = await WishBlogsCollection.insertOne(newPaintings);
+      res.send(result);
+    })
+    app.post('/addcomment/:id', async(req,res) =>{
+      const newPaintings = req.body;
+      // delete newPaintings._id; // Remove the _id field
+      console.log(newPaintings);
+      const result = await CommentCollection.insertOne(newPaintings);
       res.send(result);
     })
     
