@@ -26,7 +26,7 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     const blogsCollection =client.db('blogsDB').collection('blogs')
-    const WishBlogsCollection =client.db('WishblogsDB').collection('Wishblogs')
+    const WishBlogsCollection =client.db('WishblogsDB').collection('wishblogs/:email')
   
     await client.connect();
 
@@ -35,6 +35,30 @@ async function run() {
       const result=await cursor.toArray();
       res.send(result)
     })
+
+    app.get('/topposts', async (req, res) => {
+      try {
+        // Retrieve all blogs from the database
+        const allBlogs = await blogsCollection.find().toArray();
+    
+        // Calculate word count for each blog's long description and sort by word count
+        const sortedBlogs = allBlogs.sort((a, b) => {
+          const wordCountA = a.LongDescription.split(/\s+/).length;
+          const wordCountB = b.LongDescription.split(/\s+/).length;
+          return wordCountB - wordCountA;
+        });
+    
+        // Return the top posts (e.g., top 5)
+        const topPosts = sortedBlogs.slice(0, 10);
+        
+        res.send(topPosts);
+      } catch (error) {
+        console.error("Error fetching top posts:", error);
+        res.status(500).send("Internal server error");
+      }
+    });
+
+
     app.get("/addblogs/:email", async(req,res)=>{
       console.log(req.params.email);
       const result= await  blogsCollection.find({email:req.params.email}).toArray();
@@ -49,15 +73,16 @@ async function run() {
       res.send(result);
     })
     app.post('/wishblogs/:email', async(req,res) =>{
-      const newPaintings =req.body;
+      const newPaintings = req.body;
+      delete newPaintings._id; // Remove the _id field
       console.log(newPaintings);
       const result = await WishBlogsCollection.insertOne(newPaintings);
       res.send(result);
     })
     
     app.get('/wishblogs/:email', async(req,res) =>{
-      console.log(req.params.email);
-      const result= await  WishBlogsCollection.find({email:req.params.email}).toArray();
+      // console.log(req.params.email);
+      const result= await  WishBlogsCollection.find({userEmail:req.params.email}).toArray();
       res.send(result);
     })
     // Send a ping to confirm a successful connection
