@@ -89,6 +89,13 @@ async function run() {
       const result = await WishBlogsCollection.insertOne(newPaintings);
       res.send(result);
     })
+  
+    
+    app.get('/wishblogs/:email', async(req,res) =>{
+      // console.log(req.params.email);
+      const result= await  WishBlogsCollection.find({userEmail:req.params.email}).toArray();
+      res.send(result);
+    })
     app.post('/addcomment/:id', async(req,res) =>{
       const newPaintings = req.body;
       // delete newPaintings._id; // Remove the _id field
@@ -96,11 +103,14 @@ async function run() {
       const result = await CommentCollection.insertOne(newPaintings);
       res.send(result);
     })
+    app.get("/addcomment/:id", async(req,res)=>{
+      console.log(req.params.BlogID
+      );
+      const result = await CommentCollection.find({BlogID:
+     req.params.id}).toArray();
     
-    app.get('/wishblogs/:email', async(req,res) =>{
-      // console.log(req.params.email);
-      const result= await  WishBlogsCollection.find({userEmail:req.params.email}).toArray();
-      res.send(result);
+     console.log(result);
+      res.send(result)
     })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
