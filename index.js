@@ -104,10 +104,10 @@ async function run() {
       res.send(result);
     })
     app.get("/addcomment/:id", async(req,res)=>{
-      console.log(req.params.BlogID
-      );
+      const blogId = req.params.id;
+      
       const result = await CommentCollection.find({BlogID:
-     req.params.id}).toArray();
+        blogId }).toArray();
     
      console.log(result);
       res.send(result)
