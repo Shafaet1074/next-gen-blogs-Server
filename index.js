@@ -110,7 +110,7 @@ async function run() {
     });
     app.get("/addblogs/:email",async(req,res)=>{
       console.log('My blogs',req.cookies.token);
-      console.log(req.params.email);
+      // console.log(req.params.email);
       const result= await  blogsCollection.find({writerEmail:req.params.email
       }).toArray();
       res.send(result);
@@ -129,7 +129,7 @@ async function run() {
         });
     
         // Return the top posts (e.g., top 5)
-        const topPosts = sortedBlogs.slice(0, 10);
+        const topPosts = sortedBlogs.slice(0, 5);
         
         res.send(topPosts);
       } catch (error) {
