@@ -1,17 +1,24 @@
 const express =require('express');
+require('dotenv').config()
 const cors = require('cors');
+const jwt =require('jsonwebtoken')
+const cookieParser =require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app=express();
 const port = process.env.port || 5004;
 
 //middleware
-app.use(cors());
+app.use(cors({
+  origin:['http://localhost:5173'],
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
-console.log(process.env.DB_USER);
-// console.log(process.env.DB_PASS);
 
-const uri =`mongodb+srv://nextGenBlogs:KuHvVbB39ODjr9Lm@cluster0.5ftvpmn.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+require('dotenv').config()
+
+const uri =`mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.5ftvpmn.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -28,22 +35,58 @@ async function run() {
     const blogsCollection =client.db('blogsDB').collection('blogs')
     const WishBlogsCollection =client.db('WishblogsDB').collection('wishblogs/:email')
     const CommentCollection =client.db('CommentsDB').collection('addcomment/:id')
+
+    // auth related api
+
+    app.post('/jwt', async(req,res)=>{
+      const user =req.body;
+      console.log(user);
+      const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn: '1h'})
+      res
+      .cookie('token', token ,{
+        httpOnly:true,
+        secure: false,
+      
+      })
+      .send({success : true})
+    })
+    
+
+
+    // blog related api
   
     await client.connect();
 
     app.get('/addblogs', async(req,res) =>{
+      
       const cursor =blogsCollection.find();
       const result=await cursor.toArray();
       res.send(result)
     })
 
-    app.get("/addblogs/:id", async(req,res)=>{
-      console.log(req.params.id);
-      const result = await blogsCollection.findOne({_id:
-     new ObjectId(req.params.id) ,
-    })
-     console.log(result);
-      res.send(result)
+    app.get("/addblogs/id/:id", async (req, res) => {
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(req.params.id);
+      if (!isValidObjectId) {
+      console.error("Invalid ObjectId format");
+      res.status(400).send("Invalid blog ID");
+      return;
+       }
+      try {
+        const objectId = new ObjectId(req.params.id);
+        console.log(req.params.id);
+        const result = await blogsCollection.findOne({ _id: objectId });
+        console.log(result);
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching blog:", error);
+        res.status(400).send("Invalid blog ID");
+      }
+    });
+    app.get("/addblogs/:email", async(req,res)=>{
+      console.log(req.params.email);
+      const result= await  blogsCollection.find({writerEmail:req.params.email
+      }).toArray();
+      res.send(result);
     })
 
     app.get('/topposts', async (req, res) => {
@@ -69,17 +112,16 @@ async function run() {
     });
 
 
-    app.get("/addblogs/:email", async(req,res)=>{
-      console.log(req.params.email);
-      const result= await  blogsCollection.find({email:req.params.email}).toArray();
-      res.send(result);
-    })
+  
 
 
     app.post('/addblogs', async(req,res) =>{
+      
       const newPaintings =req.body;
-      console.log(newPaintings);
+
+      // console.log(newPaintings);
       const result = await blogsCollection.insertOne(newPaintings);
+      console.log('tok tok token',req.cookies.token);
       res.send(result);
     })
     app.post('/wishblogs/:email', async(req,res) =>{
@@ -110,6 +152,47 @@ async function run() {
         blogId }).toArray();
     
      console.log(result);
+      res.send(result)
+    })
+   
+    app.get("/updateblogs/id/:id", async(req,res)=>{
+      console.log(req.params.id);
+      const result = await blogsCollection.findOne({_id:
+     new ObjectId(req.params.id) ,
+    })
+     console.log(result);
+      res.send(result)
+    })
+
+    app.put("/updateblogs/id/:id" ,async(req,res)=>{
+      console.log(req.params.id)
+      const id = req.params.id;
+      const filter ={_id: new ObjectId(id)}
+
+     const data=req.body;
+      const fulldata ={
+        $set:{
+          Title:data.Title,
+          OwnnerName:data.OwnnerName,
+          Category:data.Category,
+          ShortDescription:data.ShortDescription,
+          PhotoURL:data.PhotoURL,
+          LongDescription:data.LongDescription,
+          OwnerPhotoURL:data.photo,
+          
+        }
+      }
+      const result = await blogsCollection.updateOne(filter,fulldata);
+      
+      res.send(result);
+      console.log(result);
+    })
+    
+
+    app.delete("/delete/:id", async(req,res) =>{
+      console.log(req.params.id);
+      const result = await WishBlogsCollection.deleteOne({_id:new ObjectId(req.params.id)})
+      console.log(result);
       res.send(result)
     })
     // Send a ping to confirm a successful connection
