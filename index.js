@@ -29,6 +29,29 @@ const client = new MongoClient(uri, {
   }
 });
 
+// middlewares
+
+const logger =async(req,res,next)=>{
+  console.log('called',req.hostname,req.originalUrl);
+  next();
+}
+
+const verifyToken =async(req,res,next)=>{
+  const token =req.cookies?.token;
+  if(!token){
+    return res.status(401).send({message:'not authorized'})
+  }
+  jwt.verify(token,process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+     if(err){
+        return res.status(401).send({message:'unauthorized'})
+     }
+     console.log('value in the token',decoded);
+     next()
+  })
+
+}
+
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -57,18 +80,19 @@ async function run() {
   
     await client.connect();
 
-    app.get('/addblogs', async(req,res) =>{
+    app.get('/addblogs', logger, async(req,res) =>{
       
       const cursor =blogsCollection.find();
       const result=await cursor.toArray();
       res.send(result)
     })
 
-    app.get("/addblogs/id/:id", async (req, res) => {
+    app.get("/addblogs/id/:id", verifyToken, async (req, res) => {
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(req.params.id);
       if (!isValidObjectId) {
       console.error("Invalid ObjectId format");
       res.status(400).send("Invalid blog ID");
+      console.log('blog',req.cookies.token);
       return;
        }
       try {
@@ -76,13 +100,16 @@ async function run() {
         console.log(req.params.id);
         const result = await blogsCollection.findOne({ _id: objectId });
         console.log(result);
+
         res.send(result);
+        console.log('blogdetails',req.cookies.token);
       } catch (error) {
         console.error("Error fetching blog:", error);
         res.status(400).send("Invalid blog ID");
       }
     });
-    app.get("/addblogs/:email", async(req,res)=>{
+    app.get("/addblogs/:email",async(req,res)=>{
+      console.log('My blogs',req.cookies.token);
       console.log(req.params.email);
       const result= await  blogsCollection.find({writerEmail:req.params.email
       }).toArray();
@@ -115,7 +142,7 @@ async function run() {
   
 
 
-    app.post('/addblogs', async(req,res) =>{
+    app.post('/addblogs',verifyToken, async(req,res) =>{
       
       const newPaintings =req.body;
 
@@ -126,6 +153,7 @@ async function run() {
     })
     app.post('/wishblogs/:email', async(req,res) =>{
       const newPaintings = req.body;
+     
       delete newPaintings._id; // Remove the _id field
       console.log(newPaintings);
       const result = await WishBlogsCollection.insertOne(newPaintings);
@@ -133,7 +161,8 @@ async function run() {
     })
   
     
-    app.get('/wishblogs/:email', async(req,res) =>{
+    app.get('/wishblogs/:email',verifyToken, async(req,res) =>{
+      console.log('wishblogs',req.cookies.token);
       // console.log(req.params.email);
       const result= await  WishBlogsCollection.find({userEmail:req.params.email}).toArray();
       res.send(result);
@@ -155,8 +184,9 @@ async function run() {
       res.send(result)
     })
    
-    app.get("/updateblogs/id/:id", async(req,res)=>{
+    app.get("/updateblogs/id/:id",verifyToken, async(req,res)=>{
       console.log(req.params.id);
+      console.log('updated token',req.cookies.token);
       const result = await blogsCollection.findOne({_id:
      new ObjectId(req.params.id) ,
     })
