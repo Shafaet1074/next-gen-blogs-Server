@@ -129,7 +129,7 @@ async function run() {
         });
     
         // Return the top posts (e.g., top 5)
-        const topPosts = sortedBlogs.slice(0, 5);
+        const topPosts = sortedBlogs.slice(0, 10);
         
         res.send(topPosts);
       } catch (error) {
